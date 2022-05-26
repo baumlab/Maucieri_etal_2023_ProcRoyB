@@ -1,0 +1,467 @@
+---
+title: "Beta Diversity"
+subtitle: "Data and R code accompanying: "
+author: "[Dominique G. Maucieri](https://dominiquemaucieri.com), [Samuel Starko](https://samstarko.wordpress.com/) and [Julia K. Baum](https://www.juliakbaum.org/)"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+```{r Set up environment, echo=FALSE, warning=FALSE, message=FALSE}
+
+#Loading packages
+library(here)
+library(dplyr)
+library(vegan)
+library(ggplot2)
+library(strucchange)
+library(reshape)
+library(ecodist)
+library(cowplot)
+
+#My ggplot theme
+theme_DGM <- function () { 
+  theme_classic(base_size=14) + 
+    theme(panel.border = element_blank(), 
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(), 
+          axis.line = element_line(colour = "black"), 
+          axis.title=element_text(size=16, face="bold"), 
+          axis.text = element_text(size=14, face="plain"), 
+          legend.text=element_text(size=14, face="plain"), 
+          legend.title = element_text(size=16, face="bold"))
+}
+
+load(file = here("data", "Beta_Diversity.RData"))
+
+```
+
+
+```{r randomizing selection of data, echo=FALSE, warning=FALSE, include = FALSE}
+
+# Randomly subset quads so there are only 25 at each site
+sub_25quads <- character()
+
+for (i in 1:length(siteyear_factor)) {
+  siteyear_sub <- subset(quadrats_sampled, SiteYear == siteyear_factor[i])
+  set.seed(6897 + i)
+  quad_numbers <- sample.int(length(siteyear_sub$SiteYear), 25, replace = FALSE)
+
+  for (j in 1:length(quad_numbers)) {
+    sub_25quads[((i*25) + j - 25)] <- as.character(siteyear_sub[quad_numbers[j],]$UniqueID)
+  }
+}
+
+sub_25quads_info <- subset(quadrats_sampled, UniqueID %in% sub_25quads)
+
+# Subsetting one year for each site before and after the MHW
+sub_MHW <- character()
+
+for (i in 1:length(unique(sub_25quads_info$MHW_Site))) {
+  Year_sub <- subset(quadrats_sampled, MHW_Site == unique(sub_25quads_info$MHW_Site)[i])
+  set.seed(6897+i)
+  sub_MHW[i] <- as.character(Year_sub[sample.int(length(Year_sub$MHW_Site), 1, replace = FALSE),]$SiteYear)
+}
+
+#Now this site year combinations will be used in further analysis
+#They are the site year combinations found in the Beta_Diversity_df data frame
+sort(unique(Beta_Diversity_df$SiteYear)) == sort(sub_MHW)
+
+#Now we will average each coral's cover for each site year combination
+Beta_Diversity <- Beta_Diversity_df %>% 
+  group_by(Year, Site, SiteYear, HD_Cat, HD_Cont, NPP, MHW) %>% 
+  summarise_at(vars(all_of(colnames(Beta_Diversity_df)[10:34])), funs(mean)) 
+
+```
+
+# Figure 3
+
+```{r Figure 3, echo=FALSE, warning=FALSE, fig.height = 10, fig.width = 10}
+
+coral_variables <- Beta_Diversity[,all_of(names(Beta_Diversity[,c(1:7)]))]
+coral_variables$HD_Cat <- factor(coral_variables$HD_Cat, levels = c("Very High", "High", "Medium", "Low", "Very Low"))
+
+coral_cover <- Beta_Diversity[,all_of(names(Beta_Diversity[,c(8:32)]))]
+coral_cover <- droplevels(coral_cover)
+
+#scale continuous environmental variables
+coral_variables$HD_Cont_Scaled <- scale(coral_variables$HD_Cont,center=TRUE,scale=TRUE)
+
+
+# dbRDA
+
+RDA <-capscale(coral_cover~coral_variables$MHW+coral_variables$HD_Cont_Scaled, add=TRUE, distance="bray")
+
+RDA_summary <- summary(RDA) 
+
+RDA_species <- as.data.frame(RDA_summary$species[,1:2])
+RDA_species$species_names <- rownames(RDA_species)
+
+RDA_sites <- as.data.frame(RDA_summary$sites[,1:2])
+RDA_sites$sites <- coral_variables$Site
+
+RDA_biplot <- as.data.frame(RDA_summary$biplot[,1:2])
+RDA_biplot$class <- c("MHW", "HD_Cont")
+
+RDA_centroids <- as.data.frame(RDA_summary$centroids[,1:2])
+
+RDA_sites$MHW <- coral_variables$MHW
+
+
+RDA_sites_hull <- RDA_sites %>% group_by(MHW) %>%  slice(chull(CAP2, CAP1))
+
+HD_Cont_colors <- colorRampPalette(c("#2A0BD9", "#40A1FF", "#ABF8FF", "#FFAD73", "#A60021"))
+
+Figure_3 <- ggplot() + 
+  theme_DGM()+ 
+  geom_polygon(data = RDA_sites_hull, alpha = 0.1,  aes(CAP1,CAP2,group=MHW), color = "black") + 
+  geom_point(data = RDA_sites, aes(CAP1,CAP2, shape=coral_variables$MHW,color=coral_variables$HD_Cont),size=4) + 
+  guides(shape=guide_legend(title= "MHW",color="black"), color=guide_legend(title= "Disturbance")) + 
+  labs(x=paste("CAP 1 (", format(100 *RDA_summary$cont[[1]][2,1], digits=3), "%) - Marine Heatwave", sep=""), 
+       y=paste("CAP 2 (", format(100 *RDA_summary$cont[[1]][2,2], digits=2), "%) - Local Anthropogenic Stress", sep="")) + 
+  scale_shape_manual(values = c(17, 19), breaks=c("before", "after"), labels = c("Before", "After")) + 
+  scale_colour_gradientn(colours = HD_Cont_colors(50)) + 
+  guides(color = guide_colourbar(title= "LAS"),frame.colour = "black", frame.linewidth = 1, ticks.colour = "black") + 
+  theme(axis.title.x = element_text(vjust=-0.5), axis.title.y = element_text(vjust=3)) + 
+  theme(legend.position = c(0.95, 0.8))
+Figure_3
+
+jpeg(filename = here::here("figures_tables", "Figure_3.jpeg"), width = 22, height = 22, units = "cm", pointsize = 15, quality = 600, res = 600)
+Figure_3
+dev.off()
+
+
+```
+
+# PERMANOVA
+
+```{r PERMANOVA, echo=FALSE, warning=FALSE}
+
+adonis2(coral_cover ~ coral_variables$MHW *coral_variables$HD_Cont, permutations = 10000)
+
+```
+
+
+# Bray-Curtis distance plot
+
+## Before
+
+```{r Bray-Curtis distance calculations Before,echo=FALSE, warning=FALSE}
+
+#separating data sets
+Before_sub <- subset(Beta_Diversity, MHW =="before")
+
+Enviro_Before_sub <- Before_sub[,c(1:7)]
+Enviro_Before_sub$HD_Cat <- factor(Enviro_Before_sub$HD_Cat, levels = c("Very High", "High", "Medium", "Low", "Very Low"))
+
+Coral_Before_sub <- Before_sub[,c(8:32)]
+
+#site names melt
+Enviro_Before_matrix <- matrix(nrow=length(Enviro_Before_sub$Site),
+                               ncol=length(Enviro_Before_sub$Site),
+                               dimnames=list(Enviro_Before_sub$Site,t(Enviro_Before_sub$Site)))
+
+for(i in 1:length(Enviro_Before_sub$Site)) {
+  for(j in 1:length(Enviro_Before_sub$Site)) {
+    Enviro_Before_matrix[i,j] <- paste(rownames(Enviro_Before_matrix)[i],
+                                       colnames(Enviro_Before_matrix)[j])
+  } 
+}
+
+diag(Enviro_Before_matrix) <- NA
+
+Enviro_Before_melt <- melt(Enviro_Before_matrix)[melt(lower.tri(Enviro_Before_matrix))$value,]
+
+
+#bray-curtis dissimilarity melt
+Coral_Before_vegdist <- vegdist(Coral_Before_sub, method="bray")
+Coral_Before_matrix <- as.matrix(as.dist(Coral_Before_vegdist))
+diag(Coral_Before_matrix) <- NA
+
+Coral_Before_melt <- melt(Coral_Before_matrix)[melt(lower.tri(Coral_Before_matrix))$value,]
+
+
+#disturbance difference melt
+Before_HD <- dist(Enviro_Before_sub$HD_Cont)
+
+Before_HD_matrix <- as.matrix(as.dist(Before_HD))
+diag(Before_HD_matrix) <- NA
+
+Before_HD_melt <- melt(Before_HD_matrix)[melt(lower.tri(Before_HD_matrix))$value,]
+
+
+#distance difference melt
+Before_Distance.matrix <- matrix(nrow=length(Enviro_Before_sub$Site),ncol=length(Enviro_Before_sub$Site),dimnames=list(Enviro_Before_sub$Site,t(Enviro_Before_sub$Site)))
+
+for(i in 1:nrow(Before_Distance.matrix)) {
+  xx <- subset(Least_Cost_Distance, start.site == rownames(Before_Distance.matrix)[i])
+    
+  for(j in 1:ncol(Before_Distance.matrix)) {
+    if(rownames(Before_Distance.matrix)[i] == colnames(Before_Distance.matrix)[j]){
+      Before_Distance.matrix[i,j] <- as.numeric(0)
+      }else{
+        yy_sub <- subset(xx, end.site == colnames(Before_Distance.matrix)[j]) 
+        Before_Distance.matrix[i,j] <- yy_sub$distance_km[1]
+      }
+  }
+}
+
+diag(Before_Distance.matrix) <- NA
+
+Before_Distance_melt <- as.dist(Before_Distance.matrix)
+
+
+#combining melt datasets
+Before_Combined_melt <- as.data.frame(matrix(data=NA, nrow = length(Coral_Before_melt$value), ncol = 5))
+colnames(Before_Combined_melt) <- c("Site.Comb", "BC.Value", "Dist.Value.km", "HD.Diff", "MHW")
+Before_Combined_melt$Site.Comb <- Enviro_Before_melt$value
+Before_Combined_melt$BC.Value <- Coral_Before_melt$value
+Before_Combined_melt$MHW <- "Before"
+Before_Combined_melt$HD.Diff <- Before_HD_melt$value
+
+for(i in 1:length(Before_Combined_melt$Site.Comb)){
+  Before_Combined_melt$Dist.Value.km[i] <- subset(Least_Cost_Distance, site_comb == Before_Combined_melt$Site.Comb[i])$distance_km[1]
+}
+
+
+#MRM for before data
+set.seed(7684)
+BC_mod_before <- MRM(formula= BC.Value ~ HD.Diff + Dist.Value.km, data = Before_Combined_melt, nperm = 1000, method = "logistic")
+BC_mod_before
+
+set.seed(64)
+BC_mod_before_mantel <- mantel(formula = BC.Value ~ HD.Diff, data = Before_Combined_melt, nperm = 1000)
+BC_mod_before_mantel
+
+```
+
+## After
+
+```{r Bray-Curtis distance calculations After,echo=FALSE, warning=FALSE}
+
+#separating data sets
+After_sub <- subset(Beta_Diversity, MHW =="after")
+
+Enviro_After_sub <- After_sub[,c(1:7)]
+Enviro_After_sub$HD_Cat <- factor(Enviro_After_sub$HD_Cat, levels = c("Very High", "High", "Medium", "Low", "Very Low"))
+
+Coral_After_sub <- After_sub[,c(8:32)]
+
+#site names melt
+Enviro_After_matrix <- matrix(nrow=length(Enviro_After_sub$Site),
+                               ncol=length(Enviro_After_sub$Site),
+                               dimnames=list(Enviro_After_sub$Site,t(Enviro_After_sub$Site)))
+
+for(i in 1:length(Enviro_After_sub$Site)) {
+  for(j in 1:length(Enviro_After_sub$Site)) {
+    Enviro_After_matrix[i,j] <- paste(rownames(Enviro_After_matrix)[i],
+                                       colnames(Enviro_After_matrix)[j])
+  } 
+}
+
+diag(Enviro_After_matrix) <- NA
+
+Enviro_After_melt <- melt(Enviro_After_matrix)[melt(lower.tri(Enviro_After_matrix))$value,]
+
+
+#bray-curtis dissimilarity melt
+Coral_After_vegdist <- vegdist(Coral_After_sub, method="bray")
+Coral_After_matrix <- as.matrix(as.dist(Coral_After_vegdist))
+diag(Coral_After_matrix) <- NA
+
+Coral_After_melt <- melt(Coral_After_matrix)[melt(lower.tri(Coral_After_matrix))$value,]
+
+
+#disturbance difference melt
+After_HD <- dist(Enviro_After_sub$HD_Cont)
+
+After_HD_matrix <- as.matrix(as.dist(After_HD))
+diag(After_HD_matrix) <- NA
+
+After_HD_melt <- melt(After_HD_matrix)[melt(lower.tri(After_HD_matrix))$value,]
+
+
+#distance difference melt
+After_Distance.matrix <- matrix(nrow=length(Enviro_After_sub$Site),ncol=length(Enviro_After_sub$Site),dimnames=list(Enviro_After_sub$Site,t(Enviro_After_sub$Site)))
+
+for(i in 1:nrow(After_Distance.matrix)) {
+  xx <- subset(Least_Cost_Distance, start.site == rownames(After_Distance.matrix)[i])
+    
+  for(j in 1:ncol(After_Distance.matrix)) {
+    if(rownames(After_Distance.matrix)[i] == colnames(After_Distance.matrix)[j]){
+      After_Distance.matrix[i,j] <- as.numeric(0)
+      }else{
+        yy_sub <- subset(xx, end.site == colnames(After_Distance.matrix)[j]) 
+        After_Distance.matrix[i,j] <- yy_sub$distance_km[1]
+      }
+  }
+}
+
+diag(After_Distance.matrix) <- NA
+
+After_Distance_melt <- as.dist(After_Distance.matrix)
+
+
+#combining melt datasets
+After_Combined_melt <- as.data.frame(matrix(data=NA, nrow = length(Coral_After_melt$value), ncol = 5))
+colnames(After_Combined_melt) <- c("Site.Comb", "BC.Value", "Dist.Value.km", "HD.Diff", "MHW")
+After_Combined_melt$Site.Comb <- Enviro_After_melt$value
+After_Combined_melt$BC.Value <- Coral_After_melt$value
+After_Combined_melt$MHW <- "After"
+After_Combined_melt$HD.Diff <- After_HD_melt$value
+
+for(i in 1:length(After_Combined_melt$Site.Comb)){
+  After_Combined_melt$Dist.Value.km[i] <- subset(Least_Cost_Distance, site_comb == After_Combined_melt$Site.Comb[i])$distance_km[1]
+}
+
+#MRM for after data
+set.seed(456)
+BC_mod_after <- MRM(formula= BC.Value ~ HD.Diff + Dist.Value.km, data = After_Combined_melt, nperm = 1000, method = "logistic")
+BC_mod_after
+
+set.seed(13)
+BC_mod_after_mantel <- mantel(formula = BC.Value ~ HD.Diff, data = After_Combined_melt, nperm = 1000)
+BC_mod_after_mantel
+
+```
+
+## Figure S7
+
+```{r Bray-Curtis distance plots,echo=FALSE, warning=FALSE}
+
+## Combining the data sets
+
+Bray_Full <- rbind(After_Combined_melt, Before_Combined_melt)
+Bray_Full$MHW <- factor(Bray_Full$MHW, levels = c("Before", "After"))
+
+
+## PLOTS
+Figure_S7a <- ggplot(Bray_Full, aes(y=BC.Value, x=Dist.Value.km, shape = MHW))  + 
+  geom_smooth(formula = y ~ x, aes(linetype = MHW), color="black", 
+              method=glm, se=TRUE, method.args = list(family = "quasibinomial")) + 
+  geom_point(size=3) + 
+  labs(x="Distance (km)", y="BC Dissimilarity", title="", linetype="MHW", shape = "MHW") + 
+  theme_DGM() + 
+  scale_shape_manual(values = c(17, 1)) + 
+  theme(axis.title.x = element_text(vjust=-0.5), axis.title.y = element_text(vjust=3)) + 
+  ylim(0,1)
+
+Figure_S7b <- ggplot(Bray_Full, aes(y=BC.Value, x=HD.Diff, shape = MHW)) + 
+  geom_smooth(formula = y ~ x, aes(linetype = MHW), color="black", 
+              method=glm, se=TRUE, method.args = list(family = "quasibinomial")) + 
+  geom_point(size=3) + 
+  labs(x="Difference in Local Anthropogenic Stress", y="BC Dissimilarity", 
+       title="", linetype="MHW", shape = "MHW") + 
+  theme_DGM() + 
+  scale_shape_manual(values = c(17, 1)) + 
+  theme(axis.title.x = element_text(vjust=-0.5), axis.title.y = element_text(vjust=3)) + 
+  ylim(0,1)
+
+
+Figure_S7 <- plot_grid(Figure_S7a, Figure_S7b, labels = c("(a)", "(b)"), ncol = 1,  label_size=16)
+Figure_S7
+
+# jpeg(filename = here::here("figures_tables", "Figure_S7.jpeg"), width = 22, height = 22, units = "cm", pointsize = 15, quality = 600, res = 600)
+# Figure_S7
+# dev.off()
+
+```
+
+# Stressor Responses
+
+## Figure 4 (d)
+
+```{r Stressor Responses, echo=FALSE, warning=FALSE, fig.height=6, fig.width=4}
+
+VL1_before_corals <- Beta_Diversity %>% 
+  filter(MHW == "before" & Site == "VL1")
+VL3_before_corals <- Beta_Diversity %>% 
+  filter(MHW == "before" & Site == "VL3")
+
+Yuk <- vegdist(rbind(VL1_before_corals[,c(8:32)], VL3_before_corals[,c(8:32)]), method="bray")[1]
+
+VL1_after_corals <- Beta_Diversity %>% 
+  filter(MHW == "after" & Site == "VL1")
+VL3_after_corals <- Beta_Diversity %>% 
+  filter(MHW == "after" & Site == "VL3")
+
+Xd_numerator_VL1a_v_VL1b <- (vegdist(rbind(VL1_after_corals[,c(8:32)], VL1_before_corals[,c(8:32)]), method="bray")[1] - Yuk)/Yuk
+Xd_numerator_VL3a_v_VL3b <- (vegdist(rbind(VL3_after_corals[,c(8:32)], VL3_before_corals[,c(8:32)]), method="bray")[1] - Yuk)/Yuk
+
+Xd <- (Xd_numerator_VL1a_v_VL1b + Xd_numerator_VL3a_v_VL3b) / 2
+
+site_order_L2H <- c("VL1", "VL3", "L5", "L4", "L1", "M3", "M2", "M1", "M6", "M10", "H2", "VH2", "VH3", "VH1")
+
+AR_Beta <- as.data.frame(matrix(data = NA, nrow = length(site_order_L2H), ncol = 7))
+colnames(AR_Beta) <- c("Site", "HD_Cont", "Xci", "Xd", "Xai", "Xmi", "ARi")
+AR_Beta$Xd <- Xd
+AR_Beta$Site <- site_order_L2H
+
+
+for (i in 1:nrow(AR_Beta)) {
+if(AR_Beta$Site[i] != "VL1" & AR_Beta$Site[i] != "VL3"){
+  sub_site <- Beta_Diversity %>% filter(Site == AR_Beta$Site[i])
+  AR_Beta$HD_Cont[i] <- sub_site$HD_Cont[1]
+  sub_coral_before <- Beta_Diversity %>% 
+    filter(MHW == "before" & Site == AR_Beta$Site[i])
+  sub_coral_after <- Beta_Diversity %>% 
+    filter(MHW == "after" & Site == AR_Beta$Site[i])
+
+  Yci_VL1 <- vegdist(rbind(sub_coral_before[,c(8:32)], VL1_before_corals[,c(8:32)]), method="bray")
+  Yci_VL3 <- vegdist(rbind(sub_coral_before[,c(8:32)], VL3_before_corals[,c(8:32)]), method="bray")
+  AR_Beta$Xci[i] <- (((Yci_VL1[1] - Yuk)/ Yuk) + ((Yci_VL3[1] - Yuk)/ Yuk))/2
+
+  Ymi_VL1 <- vegdist(rbind(sub_coral_after[,c(8:32)], VL1_before_corals[,c(8:32)]), method="bray")
+  Ymi_VL3 <- vegdist(rbind(sub_coral_after[,c(8:32)], VL3_before_corals[,c(8:32)]), method="bray")
+  AR_Beta$Xmi[i] <- (((Ymi_VL1[1] - Yuk) / Yuk) + ((Ymi_VL3[1] - Yuk) / Yuk))/2
+  }
+if(AR_Beta$Site[i] == "VL1" | AR_Beta$Site[i] == "VL3"){
+  sub_site <- Beta_Diversity %>% filter(Site == AR_Beta$Site[i])
+  AR_Beta$HD_Cont[i] <- sub_site$HD_Cont[1]
+  sub_coral_after <- Beta_Diversity %>% 
+    filter(MHW == "after" & Site == AR_Beta$Site[i])
+
+  Yci <- vegdist(rbind(VL3_before_corals[,c(8:32)], VL1_before_corals[,c(8:32)]), method="bray")
+  AR_Beta$Xci[i] <- (Yci[1] - Yuk) / Yuk
+
+  Ymi_VL1 <- vegdist(rbind(sub_coral_after[,c(8:32)], VL1_before_corals[,c(8:32)]), method="bray")
+  Ymi_VL3 <- vegdist(rbind(sub_coral_after[,c(8:32)], VL3_before_corals[,c(8:32)]), method="bray")
+
+  AR_Beta$Xmi[i] <- (((Ymi_VL1[1] - Yuk) / Yuk) + ((Ymi_VL3[1] - Yuk)/ Yuk))/2
+  }
+}
+
+AR_Beta$Xai <- AR_Beta$Xci + AR_Beta$Xd
+AR_Beta$ARi <- AR_Beta$Xmi - AR_Beta$Xai
+
+fs.ARi_Beta <- Fstats(ARi ~ HD_Cont, data = AR_Beta)
+sctest(fs.ARi_Beta)
+
+lm_Beta <- lm(ARi ~ HD_Cont, data = AR_Beta)
+summary(lm_Beta)
+lm_Beta_preds <- predict(lm_Beta, interval = "confidence", level = 0.95)
+AR_Beta <- cbind(AR_Beta, lm_Beta_preds)
+
+Figure_4d <- ggplot(AR_Beta, aes(x=HD_Cont, y=ARi)) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0, fill="#BE1E2D", alpha=0.4) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymax=Inf, ymin=0, fill="#F4D01E", alpha=0.4) + 
+  labs(x= " ", y=" ", title="") + 
+  theme_classic(base_size=14) + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.title=element_text(size=16, face="bold"), axis.text = element_text(size=14, face="plain"), legend.text=element_text(size=14, face="plain"), legend.title = element_text(size=16, face="bold")) + 
+  geom_ribbon( aes(ymin = lwr, ymax = upr), fill = "grey", alpha = 0.3) +
+  geom_line( aes(y = fit), size = 1, color = "black") + 
+  geom_point(size=3, shape = 18) + 
+  ylim(-1, 1)
+Figure_4d
+
+# jpeg(filename = here::here("figures_tables", "Figure_4d.jpeg"), width = 11.5, height = 16, units = "cm", pointsize = 15, quality = 600, res = 600)
+# Figure_4d
+# dev.off()
+
+```
+
+
