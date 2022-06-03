@@ -660,7 +660,35 @@ summary(Simpson_Model_95)
 
 ## Table S4
 
-```{r Average losses, echo=FALSE, warning=FALSE}
+```{r Average losses total, echo=FALSE, warning=FALSE}
+
+#Richness
+estimates_90 %>% 
+  filter(order == 0) %>% 
+  select(Site, qD, MHW, HD_Cont, HD_Cat) %>% 
+  pivot_wider(names_from = MHW, values_from = qD)%>% 
+  mutate(Difference = Before - After) %>% 
+  summarise(HillRichness = mean(Difference), SEM_HillRichness = (sd(Difference)/sqrt(length(Difference))))
+
+#Shannon
+estimates_90 %>% 
+  filter(order == 1) %>% 
+  select(Site, qD, MHW, HD_Cont, HD_Cat) %>% 
+  pivot_wider(names_from = MHW, values_from = qD)%>% 
+  mutate(Difference = Before - After) %>% 
+  summarise(HillShannon = mean(Difference), SEM_HillShannon = (sd(Difference)/sqrt(length(Difference))))
+
+#Simpson
+estimates_90 %>% 
+  filter(order == 2) %>% 
+  select(Site, qD, MHW, HD_Cont, HD_Cat) %>% 
+  pivot_wider(names_from = MHW, values_from = qD)%>% 
+  mutate(Difference = Before - After) %>% 
+  summarise(HillSimpson = mean(Difference), SEM_HillSimpson = (sd(Difference)/sqrt(length(Difference))))
+
+```
+
+```{r Average losses HD cat, echo=FALSE, warning=FALSE}
 
 #Richness
 Richness_Losses_90 <- estimates_90 %>% 

@@ -130,10 +130,9 @@ Figure_3 <- ggplot() +
   theme(legend.position = c(0.95, 0.8))
 Figure_3
 
-jpeg(filename = here::here("figures_tables", "Figure_3.jpeg"), width = 22, height = 22, units = "cm", pointsize = 15, quality = 600, res = 600)
-Figure_3
-dev.off()
-
+# jpeg(filename = here::here("figures_tables", "Figure_3.jpeg"), width = 22, height = 22, units = "cm", pointsize = 15, quality = 600, res = 600)
+# Figure_3
+# dev.off()
 
 ```
 
