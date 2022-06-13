@@ -61,8 +61,10 @@ sub_25quads_info <- subset(quadrats_sampled, UniqueID %in% sub_25quads)
 # Subsetting one year for each site before and after the MHW
 sub_MHW <- character()
 
+quadrats_sampled_avg <- quadrats_sampled %>% group_by(Year, Site, SiteYear, MHW, MHW_Site) %>% summarise(SiteYear = unique(SiteYear))
+
 for (i in 1:length(unique(sub_25quads_info$MHW_Site))) {
-  Year_sub <- subset(quadrats_sampled, MHW_Site == unique(sub_25quads_info$MHW_Site)[i])
+  Year_sub <- subset(quadrats_sampled_avg, MHW_Site == unique(sub_25quads_info$MHW_Site)[i])
   set.seed(6897+i)
   sub_MHW[i] <- as.character(Year_sub[sample.int(length(Year_sub$MHW_Site), 1, replace = FALSE),]$SiteYear)
 }
