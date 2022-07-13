@@ -2,7 +2,7 @@
 
 Data and R code accompanying:
 
-<b>Add title</b>
+<b>A framework for assessing the cumulative impacts of non-discrete anthropogenic stressors: interactive effects and tipping points</b>
 
 Authors: [Dominique G. Maucieri](https://dominiquemaucieri.com), [Samuel Starko](https://samstarko.wordpress.com/) and [Julia K. Baum](https://www.juliakbaum.org)
 
