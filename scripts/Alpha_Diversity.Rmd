@@ -1,17 +1,24 @@
 ---
 title: "Alpha Diversity"
-subtitle: "Data and R code accompanying: "
-author: "[Dominique G. Maucieri](https://dominiquemaucieri.com), [Samuel Starko](https://samstarko.wordpress.com/) and [Julia K. Baum](https://www.juliakbaum.org/)"
+author: "'[Dominique G. Maucieri](https://dominiquemaucieri.com), [Samuel Starko](https://samstarko.wordpress.com/)"
+  and [Julia K. Baum](https://www.juliakbaum.org/)'
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: 
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
   html_document:
-    toc: true
+    toc: yes
     toc_depth: 3
-    toc_float: true
+    toc_float: yes
+subtitle: 'Data and R code accompanying: Tipping points and interactive effects of
+  human disturbance and heat stress on coral reef communities'
 ---
 
 
-```{r Set up environment, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Set up environment, include=FALSE}
+
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, tidy = TRUE, message=FALSE)
 
 #Loading packages
 library(here)
@@ -47,7 +54,7 @@ after_years <- c("2016b", "2017")
 
 # Summary of the Data
 
-```{r Summary of Data, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Summary of Data}
 
 #Summary of the data
 print("total # of years")
@@ -61,7 +68,7 @@ length(unique(Alpha_Diversity_df$UniqueID))
 
 ```
 ## Table S1
-```{r Sample sizes, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Sample sizes}
 
 #Sample Sizes
 Table_S1 <- Alpha_Diversity_df %>% dplyr::group_by(Year, Site) %>% dplyr::summarise(Sample_Size = length(Quadrat)) %>%
@@ -82,7 +89,7 @@ Table_S1 %>%
 # Coverage Standardizing
 ## Figure S2
 
-```{r iNEXT, echo=FALSE, warning=FALSE, message=FALSE, fig.height=13, fig.width=12}
+```{r iNEXT, fig.height=13, fig.width=12}
 
 iNEXT_list <- as.list(NA)
 
@@ -96,7 +103,10 @@ for (i in 1:length(unique(Alpha_Diversity_df$SiteYear))) {
 }
 
 out.raw <- iNEXT(iNEXT_list, datatype="incidence_raw")
-Figure_S2 <- ggiNEXT(out.raw, color.var ="site", se = FALSE) + theme_DGM() + theme(legend.position="bottom", legend.title=element_blank())
+Figure_S2 <- ggiNEXT(out.raw, color.var ="Assemblage", se = FALSE) + 
+  theme_DGM() + 
+  theme(legend.position="bottom", legend.title=element_blank()) + 
+  scale_color_manual(values = rainbow(34))
 Figure_S2
 
 # Run to save Figure S2
@@ -110,7 +120,7 @@ Figure_S2
 ## Extrapolation Trends
 ### Figure S3
 
-```{r extrapolation plot, echo=FALSE, message=FALSE, warning=FALSE, fig.height=7.5, fig.width=12}
+```{r extrapolation plot, echo=FALSE, warning=FALSE, fig.height=7.5, fig.width=12}
 
 extrapolation_df <- as.data.frame(matrix(data = NA, ncol = 2, nrow = length(50:99)))
 colnames(extrapolation_df) <- c("Coverage", "Num_Extrapolated")
@@ -121,8 +131,8 @@ for (i in 1:nrow(extrapolation_df)) {
   j <- coverages[i]
   coverage_level <- as.numeric(paste("0", j, sep = "."))
   est_i <- estimateD(iNEXT_list, datatype="incidence_raw", base="coverage", level=coverage_level, conf=0.95)
-  xx <- est_i %>% filter(method == "extrapolated")
-  extrapolated_number <- length(unique(xx$site))
+  xx <- est_i %>% filter(Method == "Extrapolation")
+  extrapolated_number <- length(unique(xx$Assemblage))
   extrapolation_df$Num_Extrapolated[i] <- extrapolated_number
 }
 
@@ -143,10 +153,10 @@ Figure_S3
 ## 85% Coverage
 ### Figure S4
 
-```{r Coverage 85, echo=FALSE, warning=FALSE, fig.height=10, fig.width=16, message=FALSE}
+```{r Coverage 85, fig.height=10, fig.width=16}
 
 est.raw <- estimateD(iNEXT_list, datatype="incidence_raw", base="coverage", level=0.85, conf=0.95) 
-estimates_85 <- est.raw %>% tidyr::separate(site, c("Site", "Year"), "_KI", remove = TRUE)
+estimates_85 <- est.raw %>% tidyr::separate(Assemblage, c("Site", "Year"), "_KI", remove = TRUE)
 
 estimates_85$MHW <- NA
 estimates_85$MHW[estimates_85$Year%in%before_years] <- "Before"
@@ -162,7 +172,7 @@ for (i in 1:length(estimates_85$Site)) {
 }
 
 Richness_85 <- estimates_85 %>% 
-  filter(order == 0) %>% 
+  filter(Order.q == 0) %>% 
   ggplot( aes(y=qD, x=HD_Cont, shape = MHW)) + 
     geom_point(aes(color = MHW), position = position_dodge(0.5), size = 5) + 
     theme_DGM() + labs(x="", y="Hill-Richness", title="") + 
@@ -176,7 +186,7 @@ Richness_85 <- estimates_85 %>%
     theme(axis.title=element_text(size=20, face="bold"), axis.text = element_text(size=16, face="plain"))
 
 Shannon_85 <- estimates_85 %>% 
-  filter(order == 1) %>% 
+  filter(Order.q == 1) %>% 
   ggplot( aes(y=qD, x=HD_Cont, shape = MHW)) + 
     geom_point(aes(color = MHW), position = position_dodge(0.5), size = 5) + 
     theme_DGM() +
@@ -191,7 +201,7 @@ Shannon_85 <- estimates_85 %>%
     theme(axis.title=element_text(size=20, face="bold"), axis.text = element_text(size=16, face="plain"))
 
 Simpson_85 <- estimates_85 %>% 
-  filter(order == 2) %>% 
+  filter(Order.q == 2) %>% 
   ggplot( aes(y=qD, x=HD_Cont, shape = MHW)) + 
     geom_point(aes(color = MHW), position = position_dodge(0.5), size = 5) + 
     theme_DGM() + 
@@ -208,19 +218,19 @@ Diversity_85 <- plot_grid(Richness_85, Shannon_85, Simpson_85, labels = c("(a)",
 
 
 Richness_diff_85 <- estimates_85 %>% 
-  filter(order == 0) %>% 
+  filter(Order.q == 0) %>% 
   select(Site, qD, MHW, HD_Cont) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
   mutate(Difference = Before - After)
 
 Shannon_diff_85 <- estimates_85 %>% 
-  filter(order == 1) %>% 
+  filter(Order.q == 1) %>% 
   select(Site, qD, MHW, HD_Cont) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
   mutate(Difference = Before - After)
 
 Simpson_diff_85 <- estimates_85 %>% 
-  filter(order == 2) %>% 
+  filter(Order.q == 2) %>% 
   select(Site, qD, MHW, HD_Cont) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
   mutate(Difference = Before - After)
@@ -274,10 +284,10 @@ Figure_S4
 ## 90% Coverage
 ### Figure 2
 
-```{r Coverage 90, echo=FALSE, warning=FALSE, fig.height=5, fig.width=16, message=FALSE}
+```{r Coverage 90, fig.height=5, fig.width=16}
 
 est.raw <- estimateD(iNEXT_list, datatype="incidence_raw", base="coverage", level=0.90, conf=0.95) 
-estimates_90 <- est.raw %>% tidyr::separate(site, c("Site", "Year"), "_KI", remove = TRUE)
+estimates_90 <- est.raw %>% tidyr::separate(Assemblage, c("Site", "Year"), "_KI", remove = TRUE)
 
 estimates_90$MHW <- NA
 estimates_90$MHW[estimates_90$Year%in%before_years] <- "Before"
@@ -310,7 +320,7 @@ for (i in 1:length(estimates_90$Site)) {
 }
 
 Richness_90 <- estimates_90 %>% 
-  filter(order == 0) %>% 
+  filter(Order.q == 0) %>% 
   ggplot( aes(y=qD, x=HD_Cont, shape = MHW)) + 
     geom_point(aes(color = MHW), position = position_dodge(0.5), size = 5) + 
     theme_DGM() + labs(x="", y="Hill-Richness", title="") + 
@@ -324,7 +334,7 @@ Richness_90 <- estimates_90 %>%
     theme(axis.title=element_text(size=20, face="bold"), axis.text = element_text(size=16, face="plain"))
 
 Shannon_90 <- estimates_90 %>% 
-  filter(order == 1) %>% 
+  filter(Order.q == 1) %>% 
   ggplot( aes(y=qD, x=HD_Cont, shape = MHW)) + 
     geom_point(aes(color = MHW), position = position_dodge(0.5), size = 5) + 
     theme_DGM() +
@@ -339,7 +349,7 @@ Shannon_90 <- estimates_90 %>%
     theme(axis.title=element_text(size=20, face="bold"), axis.text = element_text(size=16, face="plain"))
 
 Simpson_90 <- estimates_90 %>% 
-  filter(order == 2) %>% 
+  filter(Order.q == 2) %>% 
   ggplot( aes(y=qD, x=HD_Cont, shape = MHW)) + 
     geom_point(aes(color = MHW), position = position_dodge(0.5), size = 5) + 
     theme_DGM() + 
@@ -364,10 +374,10 @@ Figure_2
 
 ### Figure S5
 
-```{r Coverage 90 Figure S5, echo=FALSE, warning=FALSE, fig.height=10, fig.width=16}
+```{r Coverage 90 Figure S5, fig.height=10, fig.width=16}
 
 Shannon_90_supp <- estimates_90 %>% 
-  filter(order == 1) %>% 
+  filter(Order.q == 1) %>% 
   ggplot( aes(y=qD, x=HD_Cont, shape = MHW)) + 
     geom_point(aes(color = MHW), position = position_dodge(0.5), size = 5) + 
     theme_DGM() +
@@ -384,19 +394,19 @@ Shannon_90_supp <- estimates_90 %>%
 Diversity_90 <- plot_grid(Richness_90, Shannon_90_supp, Simpson_90, labels = c("(a)", "(b)", "(c)"), nrow=1, rel_widths = c(1,1,1.3), label_size = 18)
 
 Richness_diff_90 <- estimates_90 %>% 
-  filter(order == 0) %>% 
+  filter(Order.q == 0) %>% 
   select(Site, qD, MHW, HD_Cont) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
   mutate(Difference = Before - After)
 
 Shannon_diff_90 <- estimates_90 %>% 
-  filter(order == 1) %>% 
+  filter(Order.q == 1) %>% 
   select(Site, qD, MHW, HD_Cont) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
   mutate(Difference = Before - After)
 
 Simpson_diff_90 <- estimates_90 %>% 
-  filter(order == 2) %>% 
+  filter(Order.q == 2) %>% 
   select(Site, qD, MHW, HD_Cont) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
   mutate(Difference = Before - After)
@@ -450,10 +460,10 @@ Figure_S5
 ## 95% Coverage
 ### Figure S6
 
-```{r Coverage 95, echo=FALSE, warning=FALSE, fig.height=10, fig.width=16, message=FALSE}
+```{r Coverage 95, fig.height=10, fig.width=16}
 
 est.raw <- estimateD(iNEXT_list, datatype="incidence_raw", base="coverage", level=0.95, conf=0.95) 
-estimates_95 <- est.raw %>% tidyr::separate(site, c("Site", "Year"), "_KI", remove = TRUE)
+estimates_95 <- est.raw %>% tidyr::separate(Assemblage, c("Site", "Year"), "_KI", remove = TRUE)
 
 estimates_95$MHW <- NA
 estimates_95$MHW[estimates_95$Year%in%before_years] <- "Before"
@@ -469,7 +479,7 @@ for (i in 1:length(estimates_95$Site)) {
 }
 
 Richness_95 <- estimates_95 %>% 
-  filter(order == 0) %>% 
+  filter(Order.q == 0) %>% 
   ggplot( aes(y=qD, x=HD_Cont, shape = MHW)) + 
     geom_point(aes(color = MHW), position = position_dodge(0.5), size = 5) + 
     theme_DGM() + labs(x="", y="Hill-Richness", title="") + 
@@ -483,7 +493,7 @@ Richness_95 <- estimates_95 %>%
     theme(axis.title=element_text(size=20, face="bold"), axis.text = element_text(size=16, face="plain"))
 
 Shannon_95 <- estimates_95 %>% 
-  filter(order == 1) %>% 
+  filter(Order.q == 1) %>% 
   ggplot( aes(y=qD, x=HD_Cont, shape = MHW)) + 
     geom_point(aes(color = MHW), position = position_dodge(0.5), size = 5) + 
     theme_DGM() +
@@ -498,7 +508,7 @@ Shannon_95 <- estimates_95 %>%
     theme(axis.title=element_text(size=20, face="bold"), axis.text = element_text(size=16, face="plain"))
 
 Simpson_95 <- estimates_95 %>% 
-  filter(order == 2) %>% 
+  filter(Order.q == 2) %>% 
   ggplot( aes(y=qD, x=HD_Cont, shape = MHW)) + 
     geom_point(aes(color = MHW), position = position_dodge(0.5), size = 5) + 
     theme_DGM() + 
@@ -515,19 +525,19 @@ Diversity_95 <- plot_grid(Richness_95, Shannon_95, Simpson_95, labels = c("(a)",
 
 
 Richness_diff_95 <- estimates_95 %>% 
-  filter(order == 0) %>% 
+  filter(Order.q == 0) %>% 
   select(Site, qD, MHW, HD_Cont) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
   mutate(Difference = Before - After)
 
 Shannon_diff_95 <- estimates_95 %>% 
-  filter(order == 1) %>% 
+  filter(Order.q == 1) %>% 
   select(Site, qD, MHW, HD_Cont) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
   mutate(Difference = Before - After)
 
 Simpson_diff_95 <- estimates_95 %>% 
-  filter(order == 2) %>% 
+  filter(Order.q == 2) %>% 
   select(Site, qD, MHW, HD_Cont) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
   mutate(Difference = Before - After)
@@ -583,88 +593,139 @@ Figure_S6
 ## Table 1 and S3
 - The following models were used to create Table 1 and S3
 
-```{r models 85, echo=FALSE, warning=FALSE}
+### Hill-Richness - 85% Coverage
 
-print("Hill-Richness")
+```{r models 85 richness}
 
 Richness_Model_85 <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + NPP + (1|Site), data = estimates_85 %>% 
-                               filter(order == 0))
+                               filter(Order.q == 0))
 summary(Richness_Model_85)
 
+```
 
-print("Hill-Shannon")
+
+### Hill-Shannon - 85% Coverage
+
+```{r models 85 shannon}
 
 Shannon_Model_85 <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + NPP + (1|Site), data = estimates_85 %>% 
-                              filter(order == 1))
+                              filter(Order.q == 1))
 summary(Shannon_Model_85)
 
+```
 
-print("Hill-Simpson")
+
+### Hill-Simpson - 85% Coverage
+
+```{r models 85 simpson}
 
 Simpson_Model_85 <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + NPP + (1|Site), data = estimates_85 %>% 
-                              filter(order == 2))
+                              filter(Order.q == 2))
 summary(Simpson_Model_85)
 
 ```
 
-```{r models 90, echo=FALSE, warning=FALSE}
+### Hill-Richness - 90% Coverage
 
-print("Hill-Richness")
+```{r models 90 richness}
 
 Richness_Model_90 <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + NPP + (1|Site), data = estimates_90 %>% 
-                               filter(order == 0))
+                               filter(Order.q == 0))
 summary(Richness_Model_90)
 
+```
 
-print("Hill-Shannon")
+### Hill-Shannon - 90% Coverage
+
+```{r models 90 shannon}
 
 Shannon_Model_90 <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + NPP + (1|Site), data = estimates_90 %>% 
-                              filter(order == 1))
+                              filter(Order.q == 1))
 summary(Shannon_Model_90)
 
+```
 
-print("Hill-Simpson")
+### Hill-Simpson - 90% Coverage
+
+```{r models 90 simpson}
 
 Simpson_Model_90 <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + NPP + (1|Site), data = estimates_90 %>% 
-                              filter(order == 2))
+                              filter(Order.q == 2))
 summary(Simpson_Model_90)
 
 ```
 
-```{r models 95, echo=FALSE, warning=FALSE}
+### Hill-Richness - 95% Coverage
 
-print("Hill-Richness")
+```{r models 95 richness}
 
 Richness_Model_95 <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + NPP + (1|Site), data = estimates_95 %>% 
-                               filter(order == 0))
+                               filter(Order.q == 0))
 summary(Richness_Model_95)
 
+```
 
-print("Hill-Shannon")
+### Hill-Shannon - 95% Coverage
+
+```{r models 95 shannon}
 
 Shannon_Model_95 <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + NPP + (1|Site), data = estimates_95 %>% 
-                              filter(order == 1))
+                              filter(Order.q == 1))
 summary(Shannon_Model_95)
 
+```
 
-print("Hill-Simpson")
+### Hill-Simpson - 95% Coverage
+
+```{r models 95 simpson}
 
 Simpson_Model_95 <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + NPP + (1|Site), data = estimates_95 %>% 
-                              filter(order == 2))
+                              filter(Order.q == 2))
 summary(Simpson_Model_95)
 
 ```
 
+## NPP Sensitivity for 90% Coverage Models
+
+### Hill-Richness - 90% Coverage
+
+```{r models 90 richness no NPP}
+
+Richness_Model_90_noNPP <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + (1|Site), data = estimates_90 %>% 
+                               filter(Order.q == 0))
+summary(Richness_Model_90_noNPP)
+
+```
+
+### Hill-Shannon - 90% Coverage
+
+```{r models 90 shannon no NPP}
+
+Shannon_Model_90_noNPP <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + (1|Site), data = estimates_90 %>% 
+                              filter(Order.q == 1))
+summary(Shannon_Model_90_noNPP)
+
+```
+
+### Hill-Simpson - 90% Coverage
+
+```{r models 90 simpson no NPP}
+
+Simpson_Model_90_noNPP <- glmmTMB(qD ~ poly(HD_Cont,2) * MHW + (1|Site), data = estimates_90 %>% 
+                              filter(Order.q == 2))
+summary(Simpson_Model_90_noNPP)
+
+```
 
 # Average Losses
 
 ## Table S4
 
-```{r Average losses total, echo=FALSE, warning=FALSE}
+```{r Average losses total}
 
 #Richness
 estimates_90 %>% 
-  filter(order == 0) %>% 
+  filter(Order.q == 0) %>% 
   select(Site, qD, MHW, HD_Cont, HD_Cat) %>% 
   pivot_wider(names_from = MHW, values_from = qD)%>% 
   mutate(Difference = Before - After) %>% 
@@ -672,7 +733,7 @@ estimates_90 %>%
 
 #Shannon
 estimates_90 %>% 
-  filter(order == 1) %>% 
+  filter(Order.q == 1) %>% 
   select(Site, qD, MHW, HD_Cont, HD_Cat) %>% 
   pivot_wider(names_from = MHW, values_from = qD)%>% 
   mutate(Difference = Before - After) %>% 
@@ -680,7 +741,7 @@ estimates_90 %>%
 
 #Simpson
 estimates_90 %>% 
-  filter(order == 2) %>% 
+  filter(Order.q == 2) %>% 
   select(Site, qD, MHW, HD_Cont, HD_Cat) %>% 
   pivot_wider(names_from = MHW, values_from = qD)%>% 
   mutate(Difference = Before - After) %>% 
@@ -688,11 +749,11 @@ estimates_90 %>%
 
 ```
 
-```{r Average losses HD cat, echo=FALSE, warning=FALSE}
+```{r Average losses HD cat}
 
 #Richness
 Richness_Losses_90 <- estimates_90 %>% 
-  filter(order == 0) %>% 
+  filter(Order.q == 0) %>% 
   select(Site, qD, MHW, HD_Cont, HD_Cat) %>% 
   pivot_wider(names_from = MHW, values_from = qD) 
 
@@ -709,7 +770,7 @@ Table_S4 <- Richness_Losses_90 %>%
 
 #Shannon
 Shannon_Losses_90 <- estimates_90 %>% 
-  filter(order == 1) %>% 
+  filter(Order.q == 1) %>% 
   select(Site, qD, MHW, HD_Cont, HD_Cat) %>% 
   pivot_wider(names_from = MHW, values_from = qD) 
 
@@ -729,7 +790,7 @@ Table_S4$SEM_HillShannon <- Shannon_avgLosses_90$SEM_HillShannon
 
 #Simpson
 Simpson_Losses_90 <- estimates_90 %>% 
-  filter(order == 2) %>% 
+  filter(Order.q == 2) %>% 
   select(Site, qD, MHW, HD_Cont, HD_Cat) %>% 
   pivot_wider(names_from = MHW, values_from = qD) 
 
@@ -761,10 +822,10 @@ Note: Notation in code is the same as the notation used in the manuscript equati
 ## Figure 4 (a-c)
 ### (a) Richness
 
-```{r Effect Size Richness, echo=FALSE, warning=FALSE, fig.height=6, fig.width=4}
+```{r Effect Size Richness, fig.height=6, fig.width=4}
 
 Xdi_raw_Richness <- estimates_90 %>% 
-  filter(order == 0 & HD_Cat == "Very Low") %>% 
+  filter(Order.q == 0 & HD_Cat == "Very Low") %>% 
   group_by(Site) %>% 
   dplyr::select(Site, MHW, qD) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
@@ -784,8 +845,8 @@ for (i in 1:nrow(AR_Richness)) {
   sub_df <- Alpha_Diversity_df %>% filter(Site == AR_Richness$Site[i])
   AR_Richness$HD_Cont[i] <- sub_df$HD_Cont[1]
   
-  Yci <- estimates_90 %>% filter(order == 0 & Site == AR_Richness$Site[i] & MHW == "Before") 
-  Ymi <- estimates_90 %>% filter(order == 0 & Site == AR_Richness$Site[i] & MHW == "After") 
+  Yci <- estimates_90 %>% filter(Order.q == 0 & Site == AR_Richness$Site[i] & MHW == "Before") 
+  Ymi <- estimates_90 %>% filter(Order.q == 0 & Site == AR_Richness$Site[i] & MHW == "After") 
   raw_calculations <- Xdi_raw_Richness %>% 
     mutate(Xci_numerator = (Before - Yci$qD[1])/Before, Xmi_numerator = (Before - Ymi$qD[1])/Before)
   
@@ -838,10 +899,10 @@ Figure_4a
 ```
 
 ### (b) Shannon
-```{r Effect Size Shannon, echo=FALSE, warning=FALSE, fig.height=6, fig.width=4}
+```{r Effect Size Shannon, fig.height=6, fig.width=4}
 
 Xdi_raw_Shannon <- estimates_90 %>% 
-  filter(order == 1 & HD_Cat == "Very Low") %>% 
+  filter(Order.q == 1 & HD_Cat == "Very Low") %>% 
   group_by(Site) %>% 
   dplyr::select(Site, MHW, qD) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
@@ -861,8 +922,8 @@ for (i in 1:nrow(AR_Shannon)) {
   sub_df <- Alpha_Diversity_df %>% filter(Site == AR_Shannon$Site[i])
   AR_Shannon$HD_Cont[i] <- sub_df$HD_Cont[1]
   
-  Yci <- estimates_90 %>% filter(order == 1 & Site == AR_Shannon$Site[i] & MHW == "Before") 
-  Ymi <- estimates_90 %>% filter(order == 1 & Site == AR_Shannon$Site[i] & MHW == "After") 
+  Yci <- estimates_90 %>% filter(Order.q == 1 & Site == AR_Shannon$Site[i] & MHW == "Before") 
+  Ymi <- estimates_90 %>% filter(Order.q == 1 & Site == AR_Shannon$Site[i] & MHW == "After") 
   raw_calculations <- Xdi_raw_Shannon %>% 
     mutate(Xci_numerator = (Before - Yci$qD[1])/Before, Xmi_numerator = (Before - Ymi$qD[1])/Before)
   
@@ -905,10 +966,10 @@ Figure_4b
 
 
 ### (c) Simpson
-```{r Effect Size 2 Simpson, echo=FALSE, warning=FALSE, fig.height=6, fig.width=4}
+```{r Effect Size 2 Simpson, fig.height=6, fig.width=4}
 
 Xdi_raw_Simpson <- estimates_90 %>% 
-  filter(order == 2 & HD_Cat == "Very Low") %>% 
+  filter(Order.q == 2 & HD_Cat == "Very Low") %>% 
   group_by(Site) %>% 
   dplyr::select(Site, MHW, qD) %>% 
   pivot_wider(names_from = MHW, values_from = qD) %>% 
@@ -928,8 +989,8 @@ for (i in 1:nrow(AR_Simpson)) {
   sub_df <- Alpha_Diversity_df %>% filter(Site == AR_Simpson$Site[i])
   AR_Simpson$HD_Cont[i] <- sub_df$HD_Cont[1]
   
-  Yci <- estimates_90 %>% filter(order == 2 & Site == AR_Simpson$Site[i] & MHW == "Before") 
-  Ymi <- estimates_90 %>% filter(order == 2 & Site == AR_Simpson$Site[i] & MHW == "After") 
+  Yci <- estimates_90 %>% filter(Order.q == 2 & Site == AR_Simpson$Site[i] & MHW == "Before") 
+  Ymi <- estimates_90 %>% filter(Order.q == 2 & Site == AR_Simpson$Site[i] & MHW == "After") 
   raw_calculations <- Xdi_raw_Simpson %>% 
     mutate(Xci_numerator = (Before - Yci$qD[1])/Before, Xmi_numerator = (Before - Ymi$qD[1])/Before)
   
