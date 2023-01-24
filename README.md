@@ -2,7 +2,7 @@
 
 Data and R code accompanying:
 
-<b>A framework for assessing the cumulative impacts of non-discrete anthropogenic stressors: interactive effects and tipping points</b>
+<b>Tipping points and interactive effects of chronic human disturbance and acute heat stress on coral diversity</b>
 
 Authors: [Dominique G. Maucieri](https://dominiquemaucieri.com), [Samuel Starko](https://samstarko.wordpress.com/) and [Julia K. Baum](https://www.juliakbaum.org)
 
