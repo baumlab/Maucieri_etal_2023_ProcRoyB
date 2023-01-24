@@ -1,18 +1,16 @@
 ---
 title: "Alpha Diversity"
-author: "'[Dominique G. Maucieri](https://dominiquemaucieri.com), [Samuel Starko](https://samstarko.wordpress.com/)"
-  and [Julia K. Baum](https://www.juliakbaum.org/)'
+author: "[Dominique G. Maucieri](https://dominiquemaucieri.com), [Samuel Starko](https://samstarko.wordpress.com/) and [Julia K. Baum](https://www.juliakbaum.org/)"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
   html_document:
     toc: yes
     toc_depth: 3
     toc_float: yes
-subtitle: 'Data and R code accompanying: Tipping points and interactive effects of
-  human disturbance and heat stress on coral reef communities'
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+subtitle: 'Data and R code accompanying: Tipping points and interactive effects of chronic human disturbance and acute heat stress on coral diversity'
 ---
 
 
@@ -24,6 +22,7 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, tidy = TRUE, message=FALSE)
 library(here)
 library(dplyr)
 library(tidyr)
+library(readxl)
 library(xlsx)
 library(kableExtra)
 library(iNEXT)
@@ -95,6 +94,7 @@ iNEXT_list <- as.list(NA)
 
 for (i in 1:length(unique(Alpha_Diversity_df$SiteYear))) {
   xx <- Alpha_Diversity_df %>% filter(SiteYear == unique(Alpha_Diversity_df$SiteYear)[i]) %>% select(Quadrat, Acropora.spp, Astrea.spp, Astreopora.spp, Cladiella.spp, Dipsastraea.spp, Favites.spp, Fungiidae, Gardineroseris.planulata, Goniastrea.edwardsi, Goniastrea.stelligera, Hydnophora.exesa, Hydnophora.microconos, Leptastrea.spp, Leptoseris.myceteroides, Lobophyllia.spp, Lobophytum.spp, Montipora.spp, Pavona.duerdeni, Pavona.varians, Platygyra.spp, Pocillopora.spp, Porites.spp, Psammocora.profundacella, Sarcophyton.spp, Sinularia.spp, Turbinaria.spp)
+  
   rownames(xx) <- xx$Quadrat
   xx$Quadrat<- NULL
   xx_t <- as.data.frame(t(xx))
@@ -591,7 +591,7 @@ Figure_S6
 # Modelling
 
 ## Table 1 and S3
-- The following models were used to create Table 1 and S3
+- The following models were used to create Table 1, S3 and S5
 
 ### Hill-Richness - 85% Coverage
 
@@ -808,6 +808,7 @@ Simpson_avgLosses_90 <- Simpson_Losses_90 %>%
 Table_S4$HillSimpson <- Simpson_avgLosses_90$HillSimpson
 Table_S4$SEM_HillSimpson <- Simpson_avgLosses_90$SEM_HillSimpson
 
+
 Table_S4 %>%
   kbl() %>%
   kable_styling()
@@ -892,7 +893,7 @@ Figure_4a <- ggplot(AR_Richness, aes(x=HD_Cont, y=ARi)) +
 Figure_4a
 
 #Run to save Figure 4a
-# jpeg(filename = here::here("figures_tables", "Figure_4a.jpeg"), width = 11.5, height = 16, units = "cm", pointsize = 15, quality = 600, res = 600)
+# jpeg(filename = here::here("figures_tables", "Figure_4a.jpeg"), width = 8, height = 10, units = "cm", pointsize = 15, quality = 600, res = 600)
 # Figure_4a
 # dev.off()
 
@@ -958,7 +959,7 @@ Figure_4b <- ggplot(AR_Shannon, aes(x=HD_Cont, y=ARi)) +
 Figure_4b
 
 #Run to save Figure 4b
-# jpeg(filename = here::here("figures_tables", "Figure_4b.jpeg"), width = 11.5, height = 16, units = "cm", pointsize = 15, quality = 600, res = 600)
+# jpeg(filename = here::here("figures_tables", "Figure_4b.jpeg"), width = 8, height = 10, units = "cm", pointsize = 15, quality = 600, res = 600)
 # Figure_4b
 # dev.off()
 
@@ -1025,7 +1026,7 @@ Figure_4c <- ggplot(AR_Simpson, aes(x=HD_Cont, y=ARi)) +
 Figure_4c
 
 #Run to save Figure 4c
-# jpeg(filename = here::here("figures_tables", "Figure_4c.jpeg"), width = 11.5, height = 16, units = "cm", pointsize = 15, quality = 600, res = 600)
+# jpeg(filename = here::here("figures_tables", "Figure_4c.jpeg"), width = 8, height = 10, units = "cm", pointsize = 15, quality = 600, res = 600)
 # Figure_4c
 # dev.off()
 

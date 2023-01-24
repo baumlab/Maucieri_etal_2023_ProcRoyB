@@ -1,13 +1,17 @@
 ---
 title: "Beta Diversity"
-subtitle: "Data and R code accompanying: Tipping points and interactive effects of human disturbance and heat stress on coral reef communities"
 author: "[Dominique G. Maucieri](https://dominiquemaucieri.com), [Samuel Starko](https://samstarko.wordpress.com/) and [Julia K. Baum](https://www.juliakbaum.org/)"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: 
+output:
   html_document:
-    toc: true
+    toc: yes
     toc_depth: 3
-    toc_float: true
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+subtitle: 'Data and R code accompanying: Tipping points and interactive effects of
+  chronic human disturbance and acute heat stress on coral diversity'
 ---
 
 
@@ -144,8 +148,8 @@ Figure_3
 # PERMANOVA
 
 ```{r PERMANOVA}
-
-adonis2(coral_cover ~ coral_variables$MHW *coral_variables$HD_Cont, permutations = 10000)
+set.seed(274)
+adonis2(coral_cover ~ coral_variables$MHW *coral_variables$HD_Cont, permutations = 1000)
 
 ```
 
@@ -464,7 +468,7 @@ Figure_4d <- ggplot(AR_Beta, aes(x=HD_Cont, y=ARi)) +
 Figure_4d
 
 # Run to save Figure 4d
-# jpeg(filename = here::here("figures_tables", "Figure_4d.jpeg"), width = 11.5, height = 16, units = "cm", pointsize = 15, quality = 600, res = 600)
+# jpeg(filename = here::here("figures_tables", "Figure_4d.jpeg"), width = 8, height = 10, units = "cm", pointsize = 15, quality = 600, res = 600)
 # Figure_4d
 # dev.off()
 
