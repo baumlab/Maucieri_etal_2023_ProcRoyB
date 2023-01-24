@@ -14,7 +14,7 @@ Authors: [Dominique G. Maucieri](https://dominiquemaucieri.com), [Samuel Starko]
 * [Alpha_Diversity.Rmd](scripts/Alpha_Diversity.Rmd): Script used to:
 	- Conduct alpha diversity analyses
 	- Figures 4a-c and S2-6
-	- Table 1, S1, and S3-4
+	- Table 1, S1, and S3-5
 	- [Alpha_Diversity.html](scripts/Alpha_Diversity.html): HTML file containing the output of [Alpha_Diversity.Rmd](scripts/Alpha_Diversity.Rmd) 
 
 * [Beta_Diversity.Rmd](scripts/Beta_Diversity.Rmd): Script used to:
